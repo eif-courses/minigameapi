@@ -1,0 +1,159 @@
+version: '3'
+
+tasks:
+  # 🚀 Development
+  server:
+    desc: "Start the backend server with hot reload (using air)"
+    cmds:
+      - air
+    silent: false
+
+  dev:
+    desc: "Run development environment"
+    cmds:
+      - task server
+    silent: false
+
+  # 🧪 Testing
+  test:
+    desc: "Run all tests"
+    cmds:
+      - go test -v ./...
+    silent: false
+
+  test-short:
+    desc: "Run tests in short mode"
+    cmds:
+      - go test -short -v ./...
+    silent: false
+
+  # 📦 Database
+  db-up:
+    desc: "Run database migrations up"
+    cmds:
+      - goose up
+    silent: false
+
+  db-reset:
+    desc: "Reset database (drop all & reapply)"
+    cmds:
+      - goose reset
+    silent: false
+
+  db-status:
+    desc: "Show migration status"
+    cmds:
+      - goose status
+    silent: false
+
+  # ⚙️ Code generation
+  generate:
+    desc: "Generate Go files from SQLc queries"
+    cmds:
+      - sqlc generate
+    silent: false
+
+  # 🔧 Maintenance
+  tidy:
+    desc: "Tidy Go modules"
+    cmds:
+      - go mod tidy
+    silent: false
+
+  fmt:
+    desc: "Format Go code"
+    cmds:
+      - go fmt ./...
+    silent: false
+
+  vet:
+    desc: "Run go vet"
+    cmds:
+      - go vet ./...
+    silent: false
+
+  lint:
+    desc: "Run golangci-lint (if installed)"
+    cmds:
+      - golangci-lint run
+    silent: false
+    ignore_error: true
+
+  # 🏗️ Build
+  build:
+    desc: "Build the application"
+    cmds:
+      - mkdir -p bin
+      - go build -o bin/civilregistry.exe ./cmd/server/main.go
+    silent: false
+
+  clean:
+    desc: "Clean build artifacts"
+    cmds:
+      - rm -rf tmp/ bin/
+    silent: false
+  urls:
+    desc: "Show application URLs"
+    cmds:
+      - |
+        echo "🌐 Application URLs:"
+        echo "  Main: http://localhost:8080"
+        echo "  Swagger: http://localhost:8080/swagger/"
+    silent: false
+
+  help:
+    desc: "Show all available tasks"
+    cmds:
+      - |
+        echo "🛠  Civil Registry - Available Tasks:"
+        echo "===================================="
+        echo ""
+        echo "🔧 Development:"
+        echo "  task dev          - Run development environment"
+        echo "  task server       - Run backend server with hot reload"
+        echo ""
+        echo "🧪 Testing:"
+        echo "  task test         - Run all tests"
+        echo "  task test-short   - Run tests (short mode)"
+        echo ""
+        echo "🗃  Database:"
+        echo "  task db-up        - Run migrations up"
+        echo "  task db-reset     - Reset database"
+        echo "  task db-status    - Show migration status"
+        echo ""
+        echo "⚙️  Code Generation:"
+        echo "  task generate     - Generate SQLc code"
+        echo ""
+        echo "🔧 Maintenance:"
+        echo "  task tidy         - Tidy Go modules"
+        echo "  task fmt          - Format Go code"
+        echo "  task vet          - Run go vet"
+        echo "  task lint         - Run golangci-lint"
+        echo ""
+        echo "🏗️  Build:"
+        echo "  task build        - Build the application"
+        echo "  task clean        - Clean build artifacts"
+        echo ""
+        echo "📋 Utilities:"
+        echo "  task urls         - Show application URLs"
+        echo "  task help         - Show this help"
+    silent: false
+
+  # Aliases for convenience
+  up:
+    desc: "Alias for db-up"
+    cmds:
+      - task db-up
+    silent: false
+
+  reset:
+    desc: "Alias for db-reset"
+    cmds:
+      - task db-reset
+    silent: false
+
+  gen:
+    desc: "Alias for generate"
+    cmds:
+      - task generate
+    silent: false
