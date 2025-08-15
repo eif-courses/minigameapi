@@ -7,10 +7,98 @@ package repository
 
 import (
 	"context"
+	"net"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createOAuthProvider = `-- name: CreateOAuthProvider :one
+INSERT INTO oauth_providers (user_id, provider, provider_user_id, provider_username, provider_email, access_token, refresh_token, token_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, user_id, provider, provider_user_id, provider_username, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at
+`
+
+type CreateOAuthProviderParams struct {
+	UserID           uuid.UUID          `json:"user_id"`
+	Provider         string             `json:"provider"`
+	ProviderUserID   string             `json:"provider_user_id"`
+	ProviderUsername pgtype.Text        `json:"provider_username"`
+	ProviderEmail    pgtype.Text        `json:"provider_email"`
+	AccessToken      *string            `json:"access_token"`
+	RefreshToken     *string            `json:"refresh_token"`
+	TokenExpiresAt   pgtype.Timestamptz `json:"token_expires_at"`
+}
+
+// OAuth provider queries
+func (q *Queries) CreateOAuthProvider(ctx context.Context, arg CreateOAuthProviderParams) (OauthProvider, error) {
+	row := q.db.QueryRow(ctx, createOAuthProvider,
+		arg.UserID,
+		arg.Provider,
+		arg.ProviderUserID,
+		arg.ProviderUsername,
+		arg.ProviderEmail,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.TokenExpiresAt,
+	)
+	var i OauthProvider
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.ProviderUsername,
+		&i.ProviderEmail,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.TokenExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createSession = `-- name: CreateSession :one
+INSERT INTO user_sessions (user_id, session_token, jwt_token_id, device_info, ip_address, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, user_id, session_token, jwt_token_id, device_info, ip_address, expires_at, created_at, last_used_at
+`
+
+type CreateSessionParams struct {
+	UserID       uuid.UUID   `json:"user_id"`
+	SessionToken string      `json:"session_token"`
+	JwtTokenID   pgtype.Text `json:"jwt_token_id"`
+	DeviceInfo   *string     `json:"device_info"`
+	IpAddress    net.IP      `json:"ip_address"`
+	ExpiresAt    time.Time   `json:"expires_at"`
+}
+
+// Session management queries (simplified)
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (UserSession, error) {
+	row := q.db.QueryRow(ctx, createSession,
+		arg.UserID,
+		arg.SessionToken,
+		arg.JwtTokenID,
+		arg.DeviceInfo,
+		arg.IpAddress,
+		arg.ExpiresAt,
+	)
+	var i UserSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SessionToken,
+		&i.JwtTokenID,
+		&i.DeviceInfo,
+		&i.IpAddress,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.LastUsedAt,
+	)
+	return i, err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash, first_name, last_name, role)
@@ -61,6 +149,51 @@ func (q *Queries) DeactivateUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
+DELETE FROM user_sessions
+WHERE expires_at < NOW()
+`
+
+func (q *Queries) DeleteExpiredSessions(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredSessions)
+	return err
+}
+
+const deleteOAuthProvider = `-- name: DeleteOAuthProvider :exec
+DELETE FROM oauth_providers
+WHERE user_id = $1 AND provider = $2
+`
+
+type DeleteOAuthProviderParams struct {
+	UserID   uuid.UUID `json:"user_id"`
+	Provider string    `json:"provider"`
+}
+
+func (q *Queries) DeleteOAuthProvider(ctx context.Context, arg DeleteOAuthProviderParams) error {
+	_, err := q.db.Exec(ctx, deleteOAuthProvider, arg.UserID, arg.Provider)
+	return err
+}
+
+const deleteSession = `-- name: DeleteSession :exec
+DELETE FROM user_sessions
+WHERE session_token = $1
+`
+
+func (q *Queries) DeleteSession(ctx context.Context, sessionToken string) error {
+	_, err := q.db.Exec(ctx, deleteSession, sessionToken)
+	return err
+}
+
+const deleteUserSessions = `-- name: DeleteUserSessions :exec
+DELETE FROM user_sessions
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserSessions(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserSessions, userID)
+	return err
+}
+
 const getAllUsers = `-- name: GetAllUsers :many
 SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, last_login_at FROM users
 WHERE is_active = true
@@ -96,6 +229,155 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getOAuthProvider = `-- name: GetOAuthProvider :one
+SELECT id, user_id, provider, provider_user_id, provider_username, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM oauth_providers
+WHERE provider = $1 AND provider_user_id = $2
+`
+
+type GetOAuthProviderParams struct {
+	Provider       string `json:"provider"`
+	ProviderUserID string `json:"provider_user_id"`
+}
+
+func (q *Queries) GetOAuthProvider(ctx context.Context, arg GetOAuthProviderParams) (OauthProvider, error) {
+	row := q.db.QueryRow(ctx, getOAuthProvider, arg.Provider, arg.ProviderUserID)
+	var i OauthProvider
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.ProviderUsername,
+		&i.ProviderEmail,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.TokenExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSessionByJWT = `-- name: GetSessionByJWT :one
+SELECT
+    us.id,
+    us.user_id,
+    us.session_token,
+    us.jwt_token_id,
+    us.device_info,
+    us.ip_address,
+    us.expires_at,
+    us.created_at,
+    us.last_used_at,
+    u.email,
+    u.first_name,
+    u.last_name,
+    u.role,
+    u.is_active
+FROM user_sessions us
+         JOIN users u ON us.user_id = u.id
+WHERE us.jwt_token_id = $1 AND us.expires_at > NOW() AND u.is_active = true
+`
+
+type GetSessionByJWTRow struct {
+	ID           uuid.UUID          `json:"id"`
+	UserID       uuid.UUID          `json:"user_id"`
+	SessionToken string             `json:"session_token"`
+	JwtTokenID   pgtype.Text        `json:"jwt_token_id"`
+	DeviceInfo   *string            `json:"device_info"`
+	IpAddress    net.IP             `json:"ip_address"`
+	ExpiresAt    time.Time          `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	LastUsedAt   pgtype.Timestamptz `json:"last_used_at"`
+	Email        string             `json:"email"`
+	FirstName    string             `json:"first_name"`
+	LastName     string             `json:"last_name"`
+	Role         pgtype.Text        `json:"role"`
+	IsActive     pgtype.Bool        `json:"is_active"`
+}
+
+func (q *Queries) GetSessionByJWT(ctx context.Context, jwtTokenID pgtype.Text) (GetSessionByJWTRow, error) {
+	row := q.db.QueryRow(ctx, getSessionByJWT, jwtTokenID)
+	var i GetSessionByJWTRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SessionToken,
+		&i.JwtTokenID,
+		&i.DeviceInfo,
+		&i.IpAddress,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.LastUsedAt,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.Role,
+		&i.IsActive,
+	)
+	return i, err
+}
+
+const getSessionByToken = `-- name: GetSessionByToken :one
+SELECT
+    us.id,
+    us.user_id,
+    us.session_token,
+    us.jwt_token_id,
+    us.device_info,
+    us.ip_address,
+    us.expires_at,
+    us.created_at,
+    us.last_used_at,
+    u.email,
+    u.first_name,
+    u.last_name,
+    u.role,
+    u.is_active
+FROM user_sessions us
+         JOIN users u ON us.user_id = u.id
+WHERE us.session_token = $1 AND us.expires_at > NOW() AND u.is_active = true
+`
+
+type GetSessionByTokenRow struct {
+	ID           uuid.UUID          `json:"id"`
+	UserID       uuid.UUID          `json:"user_id"`
+	SessionToken string             `json:"session_token"`
+	JwtTokenID   pgtype.Text        `json:"jwt_token_id"`
+	DeviceInfo   *string            `json:"device_info"`
+	IpAddress    net.IP             `json:"ip_address"`
+	ExpiresAt    time.Time          `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	LastUsedAt   pgtype.Timestamptz `json:"last_used_at"`
+	Email        string             `json:"email"`
+	FirstName    string             `json:"first_name"`
+	LastName     string             `json:"last_name"`
+	Role         pgtype.Text        `json:"role"`
+	IsActive     pgtype.Bool        `json:"is_active"`
+}
+
+func (q *Queries) GetSessionByToken(ctx context.Context, sessionToken string) (GetSessionByTokenRow, error) {
+	row := q.db.QueryRow(ctx, getSessionByToken, sessionToken)
+	var i GetSessionByTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SessionToken,
+		&i.JwtTokenID,
+		&i.DeviceInfo,
+		&i.IpAddress,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.LastUsedAt,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.Role,
+		&i.IsActive,
+	)
+	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -144,6 +426,43 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const getUserOAuthProviders = `-- name: GetUserOAuthProviders :many
+SELECT id, user_id, provider, provider_user_id, provider_username, provider_email, access_token, refresh_token, token_expires_at, created_at, updated_at FROM oauth_providers
+WHERE user_id = $1
+`
+
+func (q *Queries) GetUserOAuthProviders(ctx context.Context, userID uuid.UUID) ([]OauthProvider, error) {
+	rows, err := q.db.Query(ctx, getUserOAuthProviders, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OauthProvider
+	for rows.Next() {
+		var i OauthProvider
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Provider,
+			&i.ProviderUserID,
+			&i.ProviderUsername,
+			&i.ProviderEmail,
+			&i.AccessToken,
+			&i.RefreshToken,
+			&i.TokenExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUsersByRole = `-- name: GetUsersByRole :many
 SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, last_login_at FROM users
 WHERE role = $1 AND is_active = true
@@ -179,6 +498,42 @@ func (q *Queries) GetUsersByRole(ctx context.Context, role pgtype.Text) ([]User,
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateOAuthTokens = `-- name: UpdateOAuthTokens :exec
+UPDATE oauth_providers
+SET access_token = $3, refresh_token = $4, token_expires_at = $5, updated_at = NOW()
+WHERE provider = $1 AND provider_user_id = $2
+`
+
+type UpdateOAuthTokensParams struct {
+	Provider       string             `json:"provider"`
+	ProviderUserID string             `json:"provider_user_id"`
+	AccessToken    *string            `json:"access_token"`
+	RefreshToken   *string            `json:"refresh_token"`
+	TokenExpiresAt pgtype.Timestamptz `json:"token_expires_at"`
+}
+
+func (q *Queries) UpdateOAuthTokens(ctx context.Context, arg UpdateOAuthTokensParams) error {
+	_, err := q.db.Exec(ctx, updateOAuthTokens,
+		arg.Provider,
+		arg.ProviderUserID,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.TokenExpiresAt,
+	)
+	return err
+}
+
+const updateSessionLastUsed = `-- name: UpdateSessionLastUsed :exec
+UPDATE user_sessions
+SET last_used_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) UpdateSessionLastUsed(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, updateSessionLastUsed, id)
+	return err
 }
 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :exec

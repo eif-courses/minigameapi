@@ -1,0 +1,51 @@
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@contentType = application/json
+
+### Register a new user
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password123",
+  "first_name": "John",
+  "last_name": "Doe"
+}
+
+### Login with local user
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### Extract token from login response
+@authToken = {{login.response.body.access_token}}
+
+### Test protected endpoint with JWT
+GET {{baseUrl}}/hello
+Authorization: Bearer {{authToken}}
+
+### Get user profile
+GET {{baseUrl}}/profile
+Authorization: Bearer {{authToken}}
+
+### Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{authToken}}
+
+### Start Battle.net OAuth (open in browser)
+GET {{baseUrl}}/auth/battlenet
+
+### OAuth Success Response Example (copy token from browser response)
+# Replace this with actual token from OAuth callback
+@oauthToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZGM4NDBkZTAtYTNlMi00MTMzLTkzZmYtNTIzZTVkOTc5NWI4IiwiZW1haWwiOiIxMjUyNzIxNjhAYmF0dGxlbmV0Lm9hdXRoIiwicm9sZSI6InVzZXIiLCJqdGkiOiI1MWJmYjYxOC1iMmFhLTRmZmMtYWE1Ny03MWNjYzI2MTQ4ZTgiLCJpc3MiOiJtaW5pZ2FtZWFwaSIsInN1YiI6ImRjODQwZGUwLWEzZTItNDEzMy05M2ZmLTUyM2U1ZDk3OTViOCIsImV4cCI6MTc1NTMzOTY3OCwibmJmIjoxNzU1MjUzMjc4LCJpYXQiOjE3NTUyNTMyNzh9.9-oMIVk077TChnrzIqzVRA65rIbC-9-TD5OgMlSLnY4
+### Test with OAuth token
+GET {{baseUrl}}/hello
+Authorization: Bearer {{oauthToken}}
+
+###

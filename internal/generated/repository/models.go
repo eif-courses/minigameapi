@@ -5,9 +5,26 @@
 package repository
 
 import (
+	"net"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type OauthProvider struct {
+	ID               uuid.UUID          `json:"id"`
+	UserID           uuid.UUID          `json:"user_id"`
+	Provider         string             `json:"provider"`
+	ProviderUserID   string             `json:"provider_user_id"`
+	ProviderUsername pgtype.Text        `json:"provider_username"`
+	ProviderEmail    pgtype.Text        `json:"provider_email"`
+	AccessToken      *string            `json:"access_token"`
+	RefreshToken     *string            `json:"refresh_token"`
+	TokenExpiresAt   pgtype.Timestamptz `json:"token_expires_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
 
 type User struct {
 	ID           uuid.UUID          `json:"id"`
@@ -20,4 +37,16 @@ type User struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	LastLoginAt  pgtype.Timestamptz `json:"last_login_at"`
+}
+
+type UserSession struct {
+	ID           uuid.UUID          `json:"id"`
+	UserID       uuid.UUID          `json:"user_id"`
+	SessionToken string             `json:"session_token"`
+	JwtTokenID   pgtype.Text        `json:"jwt_token_id"`
+	DeviceInfo   *string            `json:"device_info"`
+	IpAddress    net.IP             `json:"ip_address"`
+	ExpiresAt    time.Time          `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	LastUsedAt   pgtype.Timestamptz `json:"last_used_at"`
 }

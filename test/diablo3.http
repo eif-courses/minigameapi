@@ -1,0 +1,36 @@
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@contentType = application/json
+
+# Use your actual OAuth token from Battle.net authentication
+@oauthToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZGM4NDBkZTAtYTNlMi00MTMzLTkzZmYtNTIzZTVkOTc5NWI4IiwiZW1haWwiOiIxMjUyNzIxNjhAYmF0dGxlbmV0Lm9hdXRoIiwicm9sZSI6InVzZXIiLCJqdGkiOiI1MWJmYjYxOC1iMmFhLTRmZmMtYWE1Ny03MWNjYzI2MTQ4ZTgiLCJpc3MiOiJtaW5pZ2FtZWFwaSIsInN1YiI6ImRjODQwZGUwLWEzZTItNDEzMy05M2ZmLTUyM2U1ZDk3OTViOCIsImV4cCI6MTc1NTMzOTY3OCwibmJmIjoxNzU1MjUzMjc4LCJpYXQiOjE3NTUyNTMyNzh9.9-oMIVk077TChnrzIqzVRA65rIbC-9-TD5OgMlSLnY4
+### Get my Diablo 3 profile
+GET {{baseUrl}}/d3/profile
+Authorization: Bearer {{oauthToken}}
+
+### Get Diablo 3 profile by BattleTag (replace # with -)
+GET {{baseUrl}}/d3/profile/PAUKŠTIS-2917
+Authorization: Bearer {{oauthToken}}
+
+### Get all Diablo 3 acts
+GET {{baseUrl}}/d3/acts
+Authorization: Bearer {{oauthToken}}
+
+### Get specific Diablo 3 act (Act 1)
+GET {{baseUrl}}/d3/act/1
+Authorization: Bearer {{oauthToken}}
+
+### Get specific Diablo 3 act (Act 2)
+GET {{baseUrl}}/d3/act/2
+Authorization: Bearer {{oauthToken}}
+
+### Get Diablo 3 item (example item slug)
+# Note: You need actual item slug and ID from the game
+GET {{baseUrl}}/d3/item/corrupted-ashbringer-Unique_Sword_2H_104_x1
+Authorization: Bearer {{oauthToken}}
+
+### Test with different item
+GET {{baseUrl}}/d3/item/the-furnace-Unique_Mace_2H_103_x1
+Authorization: Bearer {{oauthToken}}
+
+###

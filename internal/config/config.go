@@ -9,12 +9,15 @@ import (
 )
 
 type Config struct {
-	DatabaseURL  string
-	Port         int
-	JWTSecret    string
-	Environment  string
-	CookieSecure bool // For HTTPS in production
-	LogLevel     string
+	DatabaseURL       string
+	Port              int
+	JWTSecret         string
+	Environment       string
+	CookieSecure      bool
+	LogLevel          string
+	BattleNetClientID string
+	BattleNetSecret   string
+	BattleNetRegion   string // Added missing field
 }
 
 func Load() *Config {
@@ -25,12 +28,15 @@ func Load() *Config {
 	}
 
 	return &Config{
-		DatabaseURL:  getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/civilregistry?sslmode=disable"),
-		Port:         port,
-		JWTSecret:    getEnv("JWT_SECRET", ""),
-		Environment:  getEnv("ENVIRONMENT", "development"),
-		CookieSecure: getEnv("ENVIRONMENT", "development") == "production",
-		LogLevel:     getEnv("LOG_LEVEL", "info"),
+		DatabaseURL:       getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/databasename?sslmode=disable"),
+		Port:              port,
+		JWTSecret:         getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
+		Environment:       getEnv("ENVIRONMENT", "development"),
+		CookieSecure:      getEnv("ENVIRONMENT", "development") == "production",
+		LogLevel:          getEnv("LOG_LEVEL", "info"),
+		BattleNetClientID: getEnv("BATTLE_NET_CLIENT_ID", ""),
+		BattleNetSecret:   getEnv("BATTLE_NET_SECRET", ""),
+		BattleNetRegion:   getEnv("BATTLE_NET_REGION", "us"), // Added missing field
 	}
 }
 

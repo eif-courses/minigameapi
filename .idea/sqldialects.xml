@@ -2,6 +2,7 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/migrations/00001_create_auth_tables.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/00002_add_oauth_providers.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/queries/user.sql" dialect="PostgreSQL" />
   </component>
 </project>

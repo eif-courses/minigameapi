@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrupted Ashbringer - Diablo 3 Item</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .item-tooltip {
+            max-width: 400px;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(50, 50, 50, 0.95));
+            border: 2px solid #ff8000;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 0 20px rgba(255, 128, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+
+        .item-icon {
+            width: 64px;
+            height: 64px;
+            border: 2px solid #ff8000;
+            border-radius: 4px;
+            background: rgba(255, 128, 0, 0.1);
+        }
+
+        .item-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff8000;
+            text-shadow: 0 0 10px rgba(255, 128, 0, 0.5);
+            margin: 0;
+        }
+
+        .item-type {
+            font-size: 14px;
+            color: #cccccc;
+            margin: 5px 0 0 0;
+        }
+
+        .item-stats {
+            margin: 15px 0;
+        }
+
+        .damage-dps {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .damage {
+            font-size: 18px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .attack-speed {
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        .dps {
+            font-size: 16px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .attributes {
+            margin: 15px 0;
+        }
+
+        .attribute-section {
+            margin: 10px 0;
+        }
+
+        .section-title {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 2px;
+        }
+
+        .attribute {
+            margin: 5px 0;
+            padding: 3px 0;
+            color: #6969ff;
+        }
+
+        .attribute.secondary {
+            color: #69ff69;
+        }
+
+        .flavor-text {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #c7b377;
+            font-style: italic;
+            color: #c7b377;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .item-level {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .random-affixes {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        .random-affix-title {
+            font-size: 12px;
+            color: #ffff00;
+            margin-bottom: 5px;
+        }
+
+        .random-affix {
+            color: #ffff69;
+            font-size: 14px;
+            margin: 3px 0;
+        }
+
+        .item-meta {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #444;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .account-bound {
+            color: #ff6969;
+            font-weight: bold;
+        }
+
+        .slots {
+            margin: 5px 0;
+        }
+
+        .slot {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+<div class="item-tooltip">
+    <div class="item-header">
+        <img src="http://media.blizzard.com/d3/icons/items/large/unique_sword_2h_104_x1_demonhunter_male.png"
+             alt="Corrupted Ashbringer" class="item-icon">
+        <div>
+            <h1 class="item-name">Corrupted Ashbringer</h1>
+            <p class="item-type">Legendary Two-Handed Sword</p>
+        </div>
+    </div>
+
+    <div class="damage-dps">
+        <div class="damage">1137-1702 Damage</div>
+        <div class="attack-speed">1.15 Attacks per Second</div>
+        <div class="dps">1,632.4 DPS</div>
+    </div>
+
+    <div class="attributes">
+        <div class="attribute-section">
+            <div class="section-title">Primary Attributes</div>
+            <div class="attribute">+[1177 - 1439]-[1410 - 1788] Poison Damage</div>
+        </div>
+
+        <div class="attribute-section">
+            <div class="section-title">Secondary Attributes</div>
+            <div class="attribute secondary">+[9 - 15]% Damage to Undead</div>
+            <div class="attribute secondary">
+                Chance on kill to raise a skeleton to fight for you. Upon accumulating 5 skeletons,
+                they each explode for 1000% weapon damage and the sword transforms into Ashbringer
+                for a short time. Attacking with Ashbringer burns your enemy for 5462% weapon damage as Holy.
+                [5000 - 6000]%
+            </div>
+        </div>
+    </div>
+
+    <div class="random-affixes">
+        <div class="random-affix-title">One of the following (Random):</div>
+        <div class="random-affix">• +[946 - 1125] Strength</div>
+        <div class="random-affix">• +[946 - 1125] Intelligence</div>
+        <div class="random-affix">• +[946 - 1125] Dexterity</div>
+    </div>
+
+    <div class="flavor-text">
+        Stories tell of a great paladin who wore a single gauntlet of silver and wielded a mighty sword with a flashing jewel.
+        He dispatched thousands of Risen Dead and Wretched Mothers, but fell to a tragic end. This sword bears some resemblance
+        to the legends, but its jewel is dark and threatening. Perhaps there is more to the story?
+    </div>
+
+    <div class="item-meta">
+        <div class="item-level">Required Level: 70</div>
+        <div class="account-bound">Account Bound</div>
+        <div class="slots">
+            <span class="slot">Right Hand</span>
+            <span class="slot">Left Hand</span>
+            <span class="slot">Follower Left Hand</span>
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 30px; color: #888;">
+    <p>Diablo 3 Item API Response Visualization</p>
+    <p>Powered by Battle.net API Integration</p>
+</div>
+</body>
+</html>

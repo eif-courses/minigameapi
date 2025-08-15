@@ -22,3 +22,24 @@ sql:
             go_type:
               import: "time"
               type: "Time"
+          - db_type: "text"
+            nullable: true
+            go_type:
+              type: "*string"
+          - db_type: "text"
+            nullable: false
+            go_type:
+              type: "string"
+          - db_type: "varchar"
+            nullable: true
+            go_type:
+              type: "*string"
+          - db_type: "varchar"
+            nullable: false
+            go_type:
+              type: "string"
+          - db_type: "inet"
+            nullable: true
+            go_type:
+              import: "net"
+              type: "IP"
