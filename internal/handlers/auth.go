@@ -478,8 +478,8 @@ func (h *AuthHandler) setSessionCookie(w http.ResponseWriter, sessionToken strin
 		Path:     "/",
 		MaxAge:   int((24 * time.Hour).Seconds()), // 24 hours
 		HttpOnly: true,                            // XSS protection
-		Secure:   false,                           // Set to true in production with HTTPS
-		SameSite: http.SameSiteLaxMode,            // CSRF protection, Lax for OAuth redirects
+		Secure:   true,                            // Set to true in production with HTTPS
+		SameSite: http.SameSiteNoneMode,           // CSRF protection, Lax for OAuth redirects
 	}
 
 	http.SetCookie(w, cookie)
@@ -498,8 +498,8 @@ func (h *AuthHandler) clearSessionCookie(w http.ResponseWriter) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	}
 
 	http.SetCookie(w, cookie)
