@@ -139,6 +139,8 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 				r.Post("/logout", authHandler.Logout)
 			})
 		})
+		// NEW: API-only OAuth endpoint for mobile apps (Retrofit)
+		r.Post("/auth/battlenet/token", authHandler.APILoginWithBattleNet)
 
 		// Protected application routes
 		r.Group(func(r chi.Router) {

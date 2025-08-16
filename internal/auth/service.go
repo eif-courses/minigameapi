@@ -24,11 +24,39 @@ type AuthResponse struct {
 	SessionToken string           `json:"session_token,omitempty"`
 }
 
+// NEW: API-specific auth response for mobile/API clients
+type APIAuthResponse struct {
+	Success     bool             `json:"success"`
+	User        *repository.User `json:"user"`
+	AccessToken string           `json:"access_token"`
+	TokenType   string           `json:"token_type"`
+	ExpiresIn   int              `json:"expires_in"`
+	Provider    string           `json:"provider,omitempty"`
+}
+
 func NewAuthService(queries *repository.Queries, jwtService *JWTService) *AuthService {
 	return &AuthService{
 		queries:    queries,
 		jwtService: jwtService,
 	}
+}
+
+// NEW: Handle API OAuth callback (for Retrofit)
+func (a *AuthService) HandleAPIAuthCallback(ctx context.Context, gothUser goth.User, deviceInfo, ipAddress string) (*APIAuthResponse, error) {
+	// Use the same OAuth logic but return API-specific response
+	authResponse, err := a.HandleOAuthCallback(ctx, gothUser, deviceInfo, ipAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &APIAuthResponse{
+		Success:     true,
+		User:        authResponse.User,
+		AccessToken: authResponse.AccessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   86400, // 24 hours in seconds
+		Provider:    gothUser.Provider,
+	}, nil
 }
 
 // Local authentication

@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/eif-courses/minigameapi/internal/auth"
+	"github.com/eif-courses/minigameapi/internal/config"
 	"github.com/eif-courses/minigameapi/internal/generated/repository"
 	"github.com/gorilla/sessions"
+	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"go.uber.org/zap"
 )
@@ -39,6 +41,180 @@ type RegisterRequest struct {
 	Password  string `json:"password"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+}
+
+// NEW: API OAuth request for Retrofit
+type BattleNetTokenRequest struct {
+	AuthorizationCode string `json:"authorization_code"`
+	RedirectURI       string `json:"redirect_uri,omitempty"`
+}
+
+// NEW: API-only OAuth endpoint for Retrofit
+func (h *AuthHandler) APILoginWithBattleNet(w http.ResponseWriter, r *http.Request) {
+	var req BattleNetTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.log.Errorw("Invalid OAuth API request", "error", err)
+		h.sendErrorResponse(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.AuthorizationCode == "" {
+		h.sendErrorResponse(w, "Authorization code is required", http.StatusBadRequest)
+		return
+	}
+
+	h.log.Infow("📱 API OAuth login attempt", "code_length", len(req.AuthorizationCode))
+
+	// Exchange code for token directly with Battle.net
+	gothUser, err := h.exchangeBattleNetCode(req.AuthorizationCode)
+	if err != nil {
+		h.log.Errorw("❌ Failed to exchange OAuth code", "error", err)
+		h.sendErrorResponse(w, "Failed to authenticate with Battle.net: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.log.Infow("✅ Battle.net user authenticated via API",
+		"user_id", gothUser.UserID,
+		"email", gothUser.Email,
+		"nickname", gothUser.NickName)
+
+	deviceInfo := "Android App - " + r.UserAgent()
+	ipAddress := getClientIP(r)
+
+	// Create API auth response
+	authResponse, err := h.authService.HandleAPIAuthCallback(r.Context(), *gothUser, deviceInfo, ipAddress)
+	if err != nil {
+		h.log.Errorw("❌ Failed to create user session", "error", err)
+		h.sendErrorResponse(w, "Failed to create user session", http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Infow("🎉 API OAuth successful", "user_id", authResponse.User.ID)
+
+	// Return JSON response with token
+	h.sendSuccessResponse(w, map[string]interface{}{
+		"success":      authResponse.Success,
+		"access_token": authResponse.AccessToken,
+		"token_type":   authResponse.TokenType,
+		"expires_in":   authResponse.ExpiresIn,
+		"user": map[string]interface{}{
+			"id":         authResponse.User.ID,
+			"email":      authResponse.User.Email,
+			"first_name": authResponse.User.FirstName,
+			"last_name":  authResponse.User.LastName,
+		},
+		"provider": authResponse.Provider,
+	})
+}
+
+// Helper method to exchange Battle.net authorization code
+func (h *AuthHandler) exchangeBattleNetCode(code string) (*goth.User, error) {
+	cfg := config.Load()
+
+	// Battle.net token endpoint
+	tokenURL := "https://oauth.battle.net/token"
+
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", code)
+	data.Set("client_id", cfg.BattleNetClientID)
+	data.Set("client_secret", cfg.BattleNetSecret)
+	data.Set("redirect_uri", cfg.BaseURL+"/oauth/mobile") // This doesn't really matter for API flow
+
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Battle.net token exchange failed with status %d", resp.StatusCode)
+	}
+
+	var tokenResp struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+		Scope        string `json:"scope"`
+		Error        string `json:"error"`
+		ErrorDesc    string `json:"error_description"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return nil, err
+	}
+
+	if tokenResp.Error != "" {
+		return nil, fmt.Errorf("Battle.net error: %s - %s", tokenResp.Error, tokenResp.ErrorDesc)
+	}
+
+	if tokenResp.AccessToken == "" {
+		return nil, fmt.Errorf("no access token received")
+	}
+
+	// Get user info from Battle.net
+	userInfo, err := h.getBattleNetUserInfo(tokenResp.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set token info
+	userInfo.AccessToken = tokenResp.AccessToken
+	userInfo.RefreshToken = tokenResp.RefreshToken
+	if tokenResp.ExpiresIn > 0 {
+		userInfo.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	}
+
+	return userInfo, nil
+}
+
+func (h *AuthHandler) getBattleNetUserInfo(accessToken string) (*goth.User, error) {
+	// Get user info from Battle.net userinfo endpoint
+	req, err := http.NewRequest("GET", "https://oauth.battle.net/userinfo", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Battle.net userinfo failed with status %d", resp.StatusCode)
+	}
+
+	var userInfo struct {
+		ID            int    `json:"id"`
+		BattleTag     string `json:"battletag"`
+		EmailVerified bool   `json:"email_verified"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		return nil, err
+	}
+
+	return &goth.User{
+		UserID:    fmt.Sprintf("%d", userInfo.ID),
+		NickName:  userInfo.BattleTag,
+		Email:     fmt.Sprintf("%d@battlenet.oauth", userInfo.ID), // Battle.net doesn't provide email
+		FirstName: userInfo.BattleTag,
+		LastName:  "",
+		Provider:  "battlenet",
+	}, nil
 }
 
 // Local authentication endpoints
