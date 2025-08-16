@@ -38,6 +38,7 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 			"http://127.0.0.1:3000",            // Alternative localhost
 			"http://localhost:3001",            // Alternative port
 			"https://your-frontend-domain.com", // Production frontend
+			cfg.BaseURL,                        // Current domain
 		},
 		AllowedMethods: []string{
 			"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH",
@@ -239,12 +240,8 @@ func setupOAuth(cfg *config.Config, log *zap.SugaredLogger) {
 		region = "us"
 	}
 
-	// Create callback URL based on environment
-	callbackURL := "http://localhost:8080/api/v1/auth/battlenet/callback"
-	if cfg.Environment == "production" {
-		// In production, use your actual domain
-		callbackURL = "https://your-api-domain.com/api/v1/auth/battlenet/callback"
-	}
+	// Use BaseURL from config for the callback URL
+	callbackURL := cfg.BaseURL + "/api/v1/auth/battlenet/callback"
 
 	// Setup Battle.net provider
 	battlenetProvider := battlenet.New(
@@ -267,6 +264,7 @@ func setupOAuth(cfg *config.Config, log *zap.SugaredLogger) {
 		"battle_net_region", region,
 		"callback_url", callbackURL,
 		"environment", cfg.Environment,
+		"base_url", cfg.BaseURL,
 		"provider_count", len(providers))
 }
 
@@ -375,10 +373,15 @@ func handleAPIDocs(w http.ResponseWriter, r *http.Request) {
         .post { background: #007bff; }
         .delete { background: #dc3545; }
         code { background: #333; padding: 2px 4px; border-radius: 3px; }
+        .warning { background: #ffc107; color: #000; padding: 10px; border-radius: 5px; margin: 10px 0; }
     </style>
 </head>
 <body>
     <h1>🎮 Diablo III API Documentation</h1>
+    
+    <div class="warning">
+        <strong>⚠️ Important:</strong> This API requires Battle.net OAuth authentication for Diablo 3 endpoints.
+    </div>
     
     <h2>Authentication Endpoints</h2>
     <div class="endpoint">
@@ -393,19 +396,35 @@ func handleAPIDocs(w http.ResponseWriter, r *http.Request) {
         <span class="method get">GET</span> <code>/api/v1/auth/battlenet</code><br>
         Start Battle.net OAuth flow
     </div>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/api/v1/profile</code><br>
+        Get user profile (requires authentication)
+    </div>
     
     <h2>Diablo 3 API Endpoints</h2>
     <div class="endpoint">
         <span class="method get">GET</span> <code>/api/v1/d3/profile</code><br>
-        Get your Diablo 3 profile
+        Get your Diablo 3 profile (requires Battle.net OAuth)
+    </div>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/api/v1/d3/profile/{battleTag}</code><br>
+        Get profile by BattleTag (requires Battle.net OAuth)
     </div>
     <div class="endpoint">
         <span class="method get">GET</span> <code>/api/v1/d3/acts</code><br>
-        Get all Diablo 3 acts
+        Get all Diablo 3 acts (requires Battle.net OAuth)
+    </div>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/api/v1/d3/act/{actId}</code><br>
+        Get specific act information (requires Battle.net OAuth)
     </div>
     <div class="endpoint">
         <span class="method get">GET</span> <code>/api/v1/d3/item/{itemSlugAndId}</code><br>
-        Get item information
+        Get item information (requires Battle.net OAuth)
+    </div>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/api/v1/d3/test-token</code><br>
+        Test Battle.net access token validity
     </div>
     
     <h2>Admin Endpoints</h2>
@@ -413,9 +432,28 @@ func handleAPIDocs(w http.ResponseWriter, r *http.Request) {
         <span class="method get">GET</span> <code>/api/v1/admin/users</code><br>
         Manage users (admin only)
     </div>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/api/v1/admin/stats</code><br>
+        View system statistics (admin only)
+    </div>
+    <div class="endpoint">
+        <span class="method delete">DELETE</span> <code>/api/v1/admin/sessions</code><br>
+        Clear expired sessions (admin only)
+    </div>
+    
+    <h2>Utility Endpoints</h2>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/health</code><br>
+        Health check endpoint
+    </div>
+    <div class="endpoint">
+        <span class="method get">GET</span> <code>/status</code><br>
+        Detailed status information
+    </div>
     
     <p><strong>Authentication:</strong> Use session cookies (browser) or Authorization header with JWT token (API)</p>
-    <p><strong>Frontend:</strong> <a href="http://localhost:3000" style="color: #ff8000;">http://localhost:3000</a></p>
+    <p><strong>Example:</strong> <code>Authorization: Bearer your-jwt-token</code></p>
+    <p><strong>OAuth Flow:</strong> Visit <code>/api/v1/auth/battlenet</code> to start Battle.net authentication</p>
 </body>
 </html>
 `
