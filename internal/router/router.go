@@ -121,6 +121,149 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 	authHandler := handlers.NewAuthHandler(authService, sessionStore, log)
 	d3Handler := handlers.NewDiablo3Handler(d3Service, log)
 
+	// In your router.go, add this route for android app response
+	r.Get("/oauth/mobile", func(w http.ResponseWriter, r *http.Request) {
+		// Extract the code and state from the query parameters
+		code := r.URL.Query().Get("code")
+		state := r.URL.Query().Get("state")
+		errorParam := r.URL.Query().Get("error")
+
+		if errorParam != "" {
+			// Handle OAuth error
+			html := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Error</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; background: #1a1a1a; color: #fff; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="error">❌ Login Failed</h2>
+        <p>Error: %s</p>
+        <p>Please return to your app and try again.</p>
+    </div>
+</body>
+</html>
+        `, errorParam)
+
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(html))
+			return
+		}
+
+		if code == "" {
+			http.Error(w, "No authorization code received", http.StatusBadRequest)
+			return
+		}
+
+		if state == "" {
+			http.Error(w, "No state parameter received", http.StatusBadRequest)
+			return
+		}
+
+		// Simple HTML page that will help the user return to the app
+		html := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Success</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; background: #1a1a1a; color: #fff; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .code { background: #333; padding: 20px; border-radius: 8px; word-break: break-all; margin: 20px 0; font-family: monospace; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .success { color: #28a745; }
+        .small { font-size: 12px; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="success">✅ Login Successful!</h2>
+        <p>Authentication completed successfully.</p>
+        <p>Please return to your Diablo 3 app to continue.</p>
+        
+        <div class="code">
+            <p><strong>Authorization Code:</strong></p>
+            <div id="code">%s</div>
+        </div>
+        
+        <div class="code">
+            <p><strong>State:</strong></p>
+            <div id="state">%s</div>
+        </div>
+        
+        <button onclick="copyData()">📋 Copy Auth Data</button>
+        <button onclick="tryCloseTab()">✖️ Close Tab</button>
+        
+        <p class="small">You can safely close this page and return to your app.</p>
+    </div>
+    
+    <script>
+        function copyData() {
+            const authData = JSON.stringify({
+                code: '%s',
+                state: '%s'
+            }, null, 2);
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(authData).then(function() {
+                    alert('✅ Auth data copied to clipboard!');
+                }).catch(function() {
+                    fallbackCopy(authData);
+                });
+            } else {
+                fallbackCopy(authData);
+            }
+        }
+        
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert('✅ Auth data copied to clipboard!');
+            } catch (err) {
+                alert('❌ Copy failed. Please copy manually.');
+            }
+            document.body.removeChild(textArea);
+        }
+        
+        function tryCloseTab() {
+            // Try to close the tab (might not work due to security restrictions)
+            if (window.opener) {
+                window.close();
+            } else {
+                alert('Please manually close this tab and return to your app.');
+            }
+        }
+        
+        // Auto-attempt to close after 5 seconds
+        setTimeout(function() {
+            console.log('Attempting to auto-close tab...');
+            if (window.opener || history.length > 1) {
+                window.close();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
+    `, code, state, code, state)
+
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(html))
+	})
+
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public authentication routes
