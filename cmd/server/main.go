@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +14,8 @@ import (
 	"github.com/eif-courses/minigameapi/internal/logger"
 	mainrouter "github.com/eif-courses/minigameapi/internal/router"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // for goose
+	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 )
 
@@ -40,6 +43,11 @@ func main() {
 
 	log.Infow("✅ Database connected successfully")
 
+	// Run database migrations
+	if err := runMigrations(cfg.DatabaseURL, log); err != nil {
+		log.Fatalw("❌ Failed to run migrations", "error", err)
+	}
+
 	// Battle.net OAuth status
 	printOAuthStatus(cfg, log)
 
@@ -49,7 +57,19 @@ func main() {
 
 	// Server startup info
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	baseURL := fmt.Sprintf("http://localhost:%d", cfg.Port)
+
+	// Use Railway's domain in production, localhost in development
+	var baseURL string
+	if cfg.Environment == "production" || os.Getenv("RAILWAY_ENVIRONMENT") != "" {
+		railwayDomain := os.Getenv("RAILWAY_PUBLIC_DOMAIN")
+		if railwayDomain != "" {
+			baseURL = "https://" + railwayDomain
+		} else {
+			baseURL = "https://your-app.railway.app" // fallback
+		}
+	} else {
+		baseURL = fmt.Sprintf("http://localhost:%d", cfg.Port)
+	}
 
 	printServerInfo(cfg, baseURL, log)
 	printAvailableEndpoints(baseURL, log)
@@ -75,6 +95,56 @@ func main() {
 	if err != nil {
 		log.Fatalw("❌ Server failed", "error", err)
 	}
+}
+
+func runMigrations(databaseURL string, log *zap.SugaredLogger) error {
+	log.Infow("🔄 Running database migrations...")
+
+	// Create a standard database/sql connection for goose
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to open database for migrations: %w", err)
+	}
+	defer db.Close()
+
+	// Test the connection
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("failed to ping database for migrations: %w", err)
+	}
+
+	// Set the dialect
+	if err := goose.SetDialect("postgres"); err != nil {
+		return fmt.Errorf("failed to set goose dialect: %w", err)
+	}
+
+	// Check if migrations directory exists
+	if _, err := os.Stat("./migrations"); os.IsNotExist(err) {
+		log.Warnw("⚠️  Migrations directory not found, skipping migrations")
+		return nil
+	}
+
+	// Get current migration status
+	version, err := goose.GetDBVersion(db)
+	if err != nil {
+		log.Infow("📊 First time setup - creating migration table")
+	} else {
+		log.Infow("📊 Current database version", "version", version)
+	}
+
+	// Run migrations
+	if err := goose.Up(db, "./migrations"); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	// Get final version
+	finalVersion, err := goose.GetDBVersion(db)
+	if err == nil {
+		log.Infow("✅ Database migrations completed successfully", "final_version", finalVersion)
+	} else {
+		log.Infow("✅ Database migrations completed successfully")
+	}
+
+	return nil
 }
 
 func printBanner(log *zap.SugaredLogger) {
@@ -148,10 +218,6 @@ func printAvailableEndpoints(baseURL string, log *zap.SugaredLogger) {
 	log.Infow("   • Hello World",
 		"method", "GET",
 		"endpoint", baseURL+"/api/v1/hello",
-		"auth", "required")
-	log.Infow("   • Test D3 Token",
-		"method", "GET",
-		"endpoint", baseURL+"/api/v1/d3/test-token",
 		"auth", "required")
 
 	// Diablo 3 API endpoints
