@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diablo III Minigame API - Authentication</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: rgba(30, 30, 30, 0.95);
+            border: 2px solid #ff8000;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 0 30px rgba(255, 128, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 32px;
+            color: #ff8000;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(255, 128, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #cccccc;
+            font-size: 16px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #444;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #ff8000;
+            border-bottom: 2px solid #ff8000;
+            background: rgba(255, 128, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cccccc;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #444;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #f0f0f0;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ff8000;
+            box-shadow: 0 0 10px rgba(255, 128, 0, 0.3);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff8000, #cc6600);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #cc6600, #aa5500);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 128, 0, 0.4);
+        }
+
+        .btn-oauth {
+            background: linear-gradient(135deg, #0084ff, #0066cc);
+            color: white;
+        }
+
+        .btn-oauth:hover {
+            background: linear-gradient(135deg, #0066cc, #004499);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 132, 255, 0.4);
+        }
+
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #444;
+        }
+
+        .divider span {
+            background: rgba(30, 30, 30, 0.95);
+            padding: 0 20px;
+            color: #888;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00aa00;
+            color: #00ff00;
+        }
+
+        .message.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #aa0000;
+            color: #ff6666;
+        }
+
+        .user-info {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 8px;
+            border: 1px solid #00aa00;
+        }
+
+        .user-info h3 {
+            color: #00ff00;
+            margin-bottom: 15px;
+        }
+
+        .user-details {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .user-details p {
+            margin: 5px 0;
+            color: #cccccc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #444;
+            border-radius: 50%;
+            border-top-color: #ff8000;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <div class="header">
+        <div class="logo">🎮 Diablo III API</div>
+        <div class="subtitle">Battle.net Integration</div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div id="auth-forms">
+        <div class="auth-tabs">
+            <button class="tab active" onclick="switchTab('login')">Login</button>
+            <button class="tab" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-form">
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-email">Email:</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <span class="btn-text">Login</span>
+                    <span class="loading hidden"></span>
+                </button>
+            </form>
+
+            <div class="divider">
+                <span>or</span>
+            </div>
+
+            <button class="btn btn-oauth" onclick="loginWithBattleNet()">
+                🎮 Login with Battle.net
+            </button>
+        </div>
+
+        <!-- Register Form -->
+        <div id="register-form" class="hidden">
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="register-email">Email:</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password:</label>
+                    <input type="password" id="register-password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="register-firstname">First Name:</label>
+                    <input type="text" id="register-firstname" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-lastname">Last Name:</label>
+                    <input type="text" id="register-lastname" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <span class="btn-text">Register</span>
+                    <span class="loading hidden"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Info (shown after login) -->
+    <div id="user-info" class="user-info">
+        <h3>✅ Authentication Successful!</h3>
+        <div class="user-details">
+            <p><strong>Email:</strong> <span id="user-email"></span></p>
+            <p><strong>Name:</strong> <span id="user-name"></span></p>
+            <p><strong>Role:</strong> <span id="user-role"></span></p>
+            <p><strong>Access Token:</strong> <code id="user-token" style="font-size: 12px; word-break: break-all;"></code></p>
+        </div>
+        <button class="btn btn-primary" onclick="testProtectedEndpoint()">
+            Test Protected Endpoint
+        </button>
+        <button class="btn" style="background: #666; color: white; margin-top: 10px;" onclick="logout()">
+            Logout
+        </button>
+    </div>
+</div>
+
+<script>
+    // Configuration
+    const API_BASE = 'http://localhost:8080/api/v1';
+    let currentUser = null;
+    let accessToken = null;
+
+    // Tab switching
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+        if (tab === 'login') {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+        } else {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+    }
+
+    // Show/hide loading state
+    function setLoading(formId, loading) {
+        const form = document.querySelector(`#${formId} form`);
+        const button = form.querySelector('button[type="submit"]');
+        const text = button.querySelector('.btn-text');
+        const spinner = button.querySelector('.loading');
+
+        if (loading) {
+            text.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            button.disabled = true;
+        } else {
+            text.classList.remove('hidden');
+            spinner.classList.add('hidden');
+            button.disabled = false;
+        }
+    }
+
+    // Show message
+    function showMessage(message, type = 'error') {
+        const messageEl = document.getElementById('message');
+        messageEl.textContent = message;
+        messageEl.className = `message ${type}`;
+        messageEl.style.display = 'block';
+
+        setTimeout(() => {
+            messageEl.style.display = 'none';
+        }, 5000);
+    }
+
+    // Handle login
+    async function handleLogin(event) {
+        event.preventDefault();
+        setLoading('login-form', true);
+
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Include cookies
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                accessToken = data.access_token;
+                currentUser = data.user;
+                showUserInfo(data.user, data.access_token);
+                showMessage('Login successful!', 'success');
+            } else {
+                showMessage(data.message || 'Login failed');
+            }
+        } catch (error) {
+            showMessage('Network error: ' + error.message);
+        } finally {
+            setLoading('login-form', false);
+        }
+    }
+
+    // Handle registration
+    async function handleRegister(event) {
+        event.preventDefault();
+        setLoading('register-form', true);
+
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        const firstName = document.getElementById('register-firstname').value;
+        const lastName = document.getElementById('register-lastname').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    first_name: firstName,
+                    last_name: lastName
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('Registration successful! Please login.', 'success');
+                switchTab('login');
+                document.getElementById('login-email').value = email;
+            } else {
+                showMessage(data.message || 'Registration failed');
+            }
+        } catch (error) {
+            showMessage('Network error: ' + error.message);
+        } finally {
+            setLoading('register-form', false);
+        }
+    }
+
+    // Battle.net OAuth login
+    function loginWithBattleNet() {
+        window.location.href = `${API_BASE}/auth/battlenet`;
+    }
+
+    // Show user info after successful login
+    function showUserInfo(user, token) {
+        document.getElementById('auth-forms').style.display = 'none';
+        document.getElementById('user-info').style.display = 'block';
+
+        document.getElementById('user-email').textContent = user.email;
+        document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name}`;
+        document.getElementById('user-role').textContent = user.role || 'user';
+        document.getElementById('user-token').textContent = token;
+    }
+
+    // Test protected endpoint
+    async function testProtectedEndpoint() {
+        try {
+            const response = await fetch(`${API_BASE}/hello`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage(`Protected endpoint response: ${data.message}`, 'success');
+            } else {
+                showMessage('Failed to access protected endpoint');
+            }
+        } catch (error) {
+            showMessage('Network error: ' + error.message);
+        }
+    }
+
+    // Logout
+    function logout() {
+        currentUser = null;
+        accessToken = null;
+
+        document.getElementById('auth-forms').style.display = 'block';
+        document.getElementById('user-info').style.display = 'none';
+
+        // Clear forms
+        document.querySelectorAll('input').forEach(input => input.value = '');
+
+        showMessage('Logged out successfully', 'success');
+    }
+
+    // Check for OAuth callback
+    window.addEventListener('load', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const user = urlParams.get('user');
+
+        if (token && user) {
+            try {
+                const userData = JSON.parse(decodeURIComponent(user));
+                accessToken = token;
+                currentUser = userData;
+                showUserInfo(userData, token);
+                showMessage('Battle.net login successful!', 'success');
+            } catch (error) {
+                showMessage('Error processing OAuth callback');
+            }
+        }
+    });
+</script>
+</body>
+</html>
