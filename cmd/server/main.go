@@ -100,6 +100,13 @@ func main() {
 func runMigrations(databaseURL string, log *zap.SugaredLogger) error {
 	log.Infow("🔄 Running database migrations...")
 
+	// Check if migrations directory exists
+	if _, err := os.Stat("./migrations"); os.IsNotExist(err) {
+		log.Warnw("⚠️  Migrations directory not found, skipping migrations")
+		log.Infow("💡 To enable migrations, ensure ./migrations directory exists with .sql files")
+		return nil
+	}
+
 	// Create a standard database/sql connection for goose
 	db, err := sql.Open("pgx", databaseURL)
 	if err != nil {
@@ -117,12 +124,6 @@ func runMigrations(databaseURL string, log *zap.SugaredLogger) error {
 		return fmt.Errorf("failed to set goose dialect: %w", err)
 	}
 
-	// Check if migrations directory exists
-	if _, err := os.Stat("./migrations"); os.IsNotExist(err) {
-		log.Warnw("⚠️  Migrations directory not found, skipping migrations")
-		return nil
-	}
-
 	// Get current migration status
 	version, err := goose.GetDBVersion(db)
 	if err != nil {
@@ -130,6 +131,21 @@ func runMigrations(databaseURL string, log *zap.SugaredLogger) error {
 	} else {
 		log.Infow("📊 Current database version", "version", version)
 	}
+
+	// Check how many migration files exist
+	files, err := os.ReadDir("./migrations")
+	if err != nil {
+		return fmt.Errorf("failed to read migrations directory: %w", err)
+	}
+
+	sqlFiles := 0
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".sql") {
+			sqlFiles++
+		}
+	}
+
+	log.Infow("📂 Found migration files", "count", sqlFiles)
 
 	// Run migrations
 	if err := goose.Up(db, "./migrations"); err != nil {
@@ -146,7 +162,6 @@ func runMigrations(databaseURL string, log *zap.SugaredLogger) error {
 
 	return nil
 }
-
 func printBanner(log *zap.SugaredLogger) {
 	banner := []string{
 		"",
