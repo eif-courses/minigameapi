@@ -266,8 +266,8 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
         
     function redirectToApp() {
     // Create the app URL with auth data
-    const appUrl = 'eif.viko.lt.minigameapp.root://oauth?code=' + encodeURIComponent(authCode) + 
-                  '&state=' + encodeURIComponent(authState) + '&success=true';
+    const appUrl = 'minigameapp://oauth?code=' + encodeURIComponent(authCode) +
+              '&state=' + encodeURIComponent(authState) + '&success=true';
     
     console.log('Redirecting to:', appUrl);
     
