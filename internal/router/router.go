@@ -129,7 +129,7 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 		errorParam := r.URL.Query().Get("error")
 
 		if errorParam != "" {
-			// Handle OAuth error
+			// Handle OAuth error - redirect to app with error
 			html := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -146,11 +146,17 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
     <div class="container">
         <h2 class="error">❌ Login Failed</h2>
         <p>Error: %s</p>
-        <p>Please return to your app and try again.</p>
+        <p>Redirecting back to app...</p>
     </div>
+    <script>
+        // Redirect to app with error
+        setTimeout(function() {
+            window.location.href = 'minigameapp://oauth?error=' + encodeURIComponent('%s');
+        }, 2000);
+    </script>
 </body>
 </html>
-        `, errorParam)
+        `, errorParam, errorParam)
 
 			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusBadRequest)
@@ -168,96 +174,145 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 			return
 		}
 
-		// Simple HTML page that will help the user return to the app
+		// Success page that automatically redirects to app
 		html := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OAuth Success</title>
+    <title>Diablo 3 OAuth Success</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; background: #1a1a1a; color: #fff; }
-        .container { max-width: 400px; margin: 0 auto; }
-        .code { background: #333; padding: 20px; border-radius: 8px; word-break: break-all; margin: 20px 0; font-family: monospace; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
-        .success { color: #28a745; }
-        .small { font-size: 12px; opacity: 0.8; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            text-align: center; 
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d); 
+            color: #fff; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            max-width: 400px; 
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #ff8000;
+            box-shadow: 0 0 20px rgba(255, 128, 0, 0.3);
+        }
+        .success { color: #28a745; font-size: 24px; margin-bottom: 20px; }
+        .code { 
+            background: #333; 
+            padding: 15px; 
+            border-radius: 8px; 
+            word-break: break-all; 
+            margin: 20px 0; 
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px solid #555;
+        }
+        button { 
+            background: #ff8000; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover { background: #e67300; }
+        .small { font-size: 14px; opacity: 0.8; margin-top: 20px; }
+        .logo { font-size: 20px; color: #ff8000; margin-bottom: 10px; }
+        .countdown { color: #ff8000; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="logo">🎮 Diablo 3 API</div>
         <h2 class="success">✅ Login Successful!</h2>
-        <p>Authentication completed successfully.</p>
-        <p>Please return to your Diablo 3 app to continue.</p>
+        <p>You have successfully authenticated with Battle.net!</p>
+        <p><strong>Redirecting back to your app...</strong></p>
         
         <div class="code">
-            <p><strong>Authorization Code:</strong></p>
-            <div id="code">%s</div>
+            <strong>Auth Code:</strong><br>
+            %s
         </div>
         
-        <div class="code">
-            <p><strong>State:</strong></p>
-            <div id="state">%s</div>
-        </div>
+        <button onclick="redirectNow()">🚀 Open App Now</button>
+        <button onclick="copyCode()">📋 Copy Code</button>
         
-        <button onclick="copyData()">📋 Copy Auth Data</button>
-        <button onclick="tryCloseTab()">✖️ Close Tab</button>
-        
-        <p class="small">You can safely close this page and return to your app.</p>
+        <p class="small">
+            🔄 Auto-redirecting in <span id="countdown" class="countdown">3</span> seconds.<br>
+            If your app doesn't open, tap "Open App Now" or copy the code manually.
+        </p>
     </div>
     
     <script>
-        function copyData() {
-            const authData = JSON.stringify({
-                code: '%s',
-                state: '%s'
-            }, null, 2);
-            
+        const authCode = '%s';
+        const authState = '%s';
+        let countdown = 3;
+        
+        function updateCountdown() {
+            document.getElementById('countdown').textContent = countdown;
+            if (countdown <= 0) {
+                redirectToApp();
+                return;
+            }
+            countdown--;
+            setTimeout(updateCountdown, 1000);
+        }
+        
+    function redirectToApp() {
+    // Create the app URL with auth data
+    const appUrl = 'eif.viko.lt.minigameapp.root://oauth?code=' + encodeURIComponent(authCode) + 
+                  '&state=' + encodeURIComponent(authState) + '&success=true';
+    
+    console.log('Redirecting to:', appUrl);
+    
+    // Try to open the app
+    window.location.href = appUrl;
+    
+    // Fallback: if app doesn't open, show manual instructions
+    setTimeout(function() {
+        document.querySelector('.container').innerHTML = 
+            '<div class="success">✅ Success!</div>' +
+            '<p>If your app didn\\'t open automatically:</p>' +
+            '<div class="code">' + authCode + '</div>' +
+            '<button onclick="copyCode()">Copy Code</button>' +
+            '<p class="small">Copy this code and paste it in your app manually.</p>';
+    }, 3000);
+}
+        
+        function redirectNow() {
+            clearTimeout();
+            redirectToApp();
+        }
+        
+        function copyCode() {
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(authData).then(function() {
-                    alert('✅ Auth data copied to clipboard!');
-                }).catch(function() {
-                    fallbackCopy(authData);
+                navigator.clipboard.writeText(authCode).then(() => {
+                    alert('✅ Code copied! Please paste it in your app.');
                 });
             } else {
-                fallbackCopy(authData);
-            }
-        }
-        
-        function fallbackCopy(text) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = authCode;
+                document.body.appendChild(textArea);
+                textArea.select();
                 document.execCommand('copy');
-                alert('✅ Auth data copied to clipboard!');
-            } catch (err) {
-                alert('❌ Copy failed. Please copy manually.');
-            }
-            document.body.removeChild(textArea);
-        }
-        
-        function tryCloseTab() {
-            // Try to close the tab (might not work due to security restrictions)
-            if (window.opener) {
-                window.close();
-            } else {
-                alert('Please manually close this tab and return to your app.');
+                document.body.removeChild(textArea);
+                alert('✅ Code copied! Please paste it in your app.');
             }
         }
         
-        // Auto-attempt to close after 5 seconds
-        setTimeout(function() {
-            console.log('Attempting to auto-close tab...');
-            if (window.opener || history.length > 1) {
-                window.close();
-            }
-        }, 5000);
+        // Start countdown immediately
+        updateCountdown();
     </script>
 </body>
 </html>
-    `, code, state, code, state)
+    `, code, code, state)
 
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
