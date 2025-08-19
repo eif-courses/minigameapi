@@ -50,6 +50,7 @@ type BattleNetTokenRequest struct {
 }
 
 // NEW: API-only OAuth endpoint for Retrofit
+// Update the APILoginWithBattleNet function in your handlers/auth.go
 func (h *AuthHandler) APILoginWithBattleNet(w http.ResponseWriter, r *http.Request) {
 	var req BattleNetTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -91,19 +92,14 @@ func (h *AuthHandler) APILoginWithBattleNet(w http.ResponseWriter, r *http.Reque
 
 	h.log.Infow("🎉 API OAuth successful", "user_id", authResponse.User.ID)
 
-	// Return JSON response with token
+	// FIXED: Return JSON response with ALL user fields including role
 	h.sendSuccessResponse(w, map[string]interface{}{
 		"success":      authResponse.Success,
 		"access_token": authResponse.AccessToken,
 		"token_type":   authResponse.TokenType,
 		"expires_in":   authResponse.ExpiresIn,
-		"user": map[string]interface{}{
-			"id":         authResponse.User.ID,
-			"email":      authResponse.User.Email,
-			"first_name": authResponse.User.FirstName,
-			"last_name":  authResponse.User.LastName,
-		},
-		"provider": authResponse.Provider,
+		"user":         h.sanitizeUser(authResponse.User), // Use sanitizeUser instead of manual mapping
+		"provider":     authResponse.Provider,
 	})
 }
 
