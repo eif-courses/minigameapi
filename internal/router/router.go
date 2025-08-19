@@ -122,6 +122,7 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 	authHandler := handlers.NewAuthHandler(authService, sessionStore, log)
 	d3Handler := handlers.NewDiablo3Handler(d3Service, log)
 
+	// Add this route to handle the mobile callback
 	r.Get("/oauth/mobile", func(w http.ResponseWriter, r *http.Request) {
 		log.Infow("Mobile OAuth callback received", "url", r.URL.String())
 
