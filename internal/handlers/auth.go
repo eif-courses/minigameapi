@@ -92,14 +92,15 @@ func (h *AuthHandler) APILoginWithBattleNet(w http.ResponseWriter, r *http.Reque
 
 	h.log.Infow("🎉 API OAuth successful", "user_id", authResponse.User.ID)
 
-	// FIXED: Return JSON response with ALL user fields including role
+	// FIXED: Add the missing 'message' field
 	h.sendSuccessResponse(w, map[string]interface{}{
 		"success":      authResponse.Success,
 		"access_token": authResponse.AccessToken,
 		"token_type":   authResponse.TokenType,
 		"expires_in":   authResponse.ExpiresIn,
-		"user":         h.sanitizeUser(authResponse.User), // Use sanitizeUser instead of manual mapping
+		"user":         h.sanitizeUser(authResponse.User),
 		"provider":     authResponse.Provider,
+		"message":      "Battle.net login successful", // ✅ Add this line
 	})
 }
 
