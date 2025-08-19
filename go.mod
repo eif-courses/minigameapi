@@ -10,13 +10,14 @@ require (
 	github.com/gorilla/sessions v1.4.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/joho/godotenv v1.5.1
-	github.com/markbates/goth v1.81.0
+	github.com/markbates/goth v1.82.0
 	github.com/pressly/goose/v3 v3.24.3
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.41.0
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2 // indirect
@@ -27,7 +28,7 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/oauth2 v0.17.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect

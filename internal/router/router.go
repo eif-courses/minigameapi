@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -120,6 +121,33 @@ func NewRouter(queries *repository.Queries, log *zap.SugaredLogger) http.Handler
 	authMiddleware := middleware.NewAuthMiddleware(authService, log)
 	authHandler := handlers.NewAuthHandler(authService, sessionStore, log)
 	d3Handler := handlers.NewDiablo3Handler(d3Service, log)
+
+	r.Get("/oauth/mobile", func(w http.ResponseWriter, r *http.Request) {
+		log.Infow("Mobile OAuth callback received", "url", r.URL.String())
+
+		code := r.URL.Query().Get("code")
+		error := r.URL.Query().Get("error")
+
+		if error != "" {
+			log.Warnw("OAuth error received", "error", error)
+			// Redirect to Android app with error
+			redirectURL := fmt.Sprintf("minigameapp://oauth/callback?error=%s", url.QueryEscape(error))
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+			return
+		}
+
+		if code == "" {
+			log.Warnw("No authorization code received")
+			redirectURL := "minigameapp://oauth/callback?error=no_code"
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+			return
+		}
+
+		log.Infow("Redirecting to Android app", "code_length", len(code))
+		// Redirect to Android app with authorization code
+		redirectURL := fmt.Sprintf("minigameapp://oauth/callback?code=%s", url.QueryEscape(code))
+		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+	})
 
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
