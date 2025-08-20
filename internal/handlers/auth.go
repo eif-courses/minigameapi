@@ -460,11 +460,41 @@ func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.log.Infow("Profile request", "user_id", user.ID)
+	// Get OAuth providers for this user
+	providers, err := h.authService.GetUserOAuthProviders(r.Context(), user.ID)
+	if err != nil {
+		h.log.Errorw("Failed to get OAuth providers", "error", err, "user_id", user.ID)
+	}
+
+	// Determine auth provider
+	authProvider := "email" // default
+	hasBattleNet := false
+
+	for _, provider := range providers {
+		if provider.Provider == "battlenet" {
+			authProvider = "battlenet"
+			hasBattleNet = true
+			break
+		}
+	}
+
+	h.log.Infow("Profile request", "user_id", user.ID, "auth_provider", authProvider)
 
 	h.sendSuccessResponse(w, map[string]interface{}{
-		"user": h.sanitizeUser(user),
+		"user":            h.sanitizeUser(user),
+		"auth_provider":   authProvider,
+		"has_battlenet":   hasBattleNet,
+		"oauth_providers": getProviderNames(providers), // ["battlenet", "google", etc.]
 	})
+}
+
+// Helper function
+func getProviderNames(providers []repository.OauthProvider) []string {
+	names := make([]string, len(providers))
+	for i, provider := range providers {
+		names[i] = provider.Provider
+	}
+	return names
 }
 
 // Helper methods

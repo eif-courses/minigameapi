@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/eif-courses/minigameapi/internal/generated/repository"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/markbates/goth"
 )
@@ -39,6 +40,10 @@ func NewAuthService(queries *repository.Queries, jwtService *JWTService) *AuthSe
 		queries:    queries,
 		jwtService: jwtService,
 	}
+}
+
+func (a *AuthService) GetUserOAuthProviders(ctx context.Context, userID uuid.UUID) ([]repository.OauthProvider, error) {
+	return a.queries.GetUserOAuthProviders(ctx, userID)
 }
 
 // NEW: Handle API OAuth callback (for Retrofit)
