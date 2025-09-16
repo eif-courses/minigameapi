@@ -1,9 +1,8 @@
 package auth
 
 import (
-	"time"
-
 	"github.com/jackc/pgx/v5/pgtype"
+	"time"
 )
 
 // Helper functions to convert between Go types and pgtype
